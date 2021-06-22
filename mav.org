@@ -1,0 +1,1047 @@
+#+TITLE: Emacs Configuration
+#+DESCRIPTION: An org-babel based emacs configuration I find useful
+#+LANGUAGE: en
+#+PROPERTY: results silent
+
+* Table of Contents :TOC:
+- [[#introduction][Introduction]]
+  - [[#system-config][System Config]]
+  - [[#emacs-startup][Emacs Startup]]
+- [[#general][General]]
+  - [[#garbage-collection][Garbage Collection]]
+  - [[#no-training-wheels][No training wheels]]
+  - [[#package-management][Package management]]
+  - [[#save-areas][Save Areas]]
+  - [[#secrets][Secrets]]
+  - [[#misc][Misc]]
+- [[#keybindings][Keybindings]]
+  - [[#memory-aids][Memory Aids]]
+  - [[#global-keybindings][Global Keybindings]]
+- [[#appearance][Appearance]]
+  - [[#themes][Themes]]
+  - [[#modeline][Modeline]]
+  - [[#icons][Icons]]
+  - [[#eyecandies][Eyecandies]]
+- [[#movement][Movement]]
+- [[#undo][Undo]]
+- [[#emacs-debugging][Emacs debugging]]
+- [[#file-management][File Management]]
+- [[#software-development][Software Development]]
+  - [[#version-control][Version Control]]
+- [[#applications][Applications]]
+  - [[#shell][Shell]]
+- [[#dashboard][Dashboard]]
+- [[#org-mode][Org Mode]]
+  - [[#beautification][Beautification]]
+  - [[#additionl-org-mode-functionality][Additionl Org Mode functionality]]
+- [[#unclassified-packages][Unclassified Packages]]
+- [[#future-work][Future Work]]
+  - [[#other-peoples-initel-files][Other People's .init.el files]]
+  - [[#sites][Sites]]
+
+* Introduction
+  This is my personal Emacs configuration.  This is not the first time
+  I declare [[https://www.emacswiki.org/emacs/DotEmacsBankruptcy][Emacs bankrupcy]] and start over with a new emacs life.
+
+  It is not intended to be general or beginner-friendly.  If you're a
+  beginner you'll probably be better off with one of the many emacs
+  configurations with batteries included.
+
+  Also, my Emacs stays on for weeks or months at a time; I'm not
+  interested in reducing startup time or delaying loding of packages
+  until they're first used. It simply doesn't affect me.
+
+** System Config
+
+*** Fonts
+The following fragment will be used by ~scripts/install-fonts~. Don't run
+it blindly, as is it takes a lot of disk space (the google fonts
+alone, are 650MB when zipped and 1.5GB uncompressed; nobody really
+needs all of them). Unfortunately, I don't know of a scriptable way
+for downloading  individual families.
+
+Fragments labeled ~sh-install-fonts~ are executed in a temp directory,
+no need to cleanup.
+
+#+begin_src sh-install-fonts
+echo "Installing fonts"
+
+#echo "Google Web Fonts (650MB/1.5GB)"
+#wget https://github.com/google/fonts/archive/main.zip -q
+
+#Roboto
+#Roboto Condensed
+#Roboto Mono
+#Inconsolata
+#Source Sans Pro
+#Cabin (or Cabin Sketch)
+#Architects Daughter
+#FasterOne
+#GochiHand
+# YanoneKaffeesatz
+
+if [[ ! -f ${HOME}/.fonts/MaterialIcons-Regular.ttf ]]; then
+echo "Material Icons (309MB/2.1GB)"
+wget https://github.com/google/material-design-icons/archive/refs/tags/4.0.0.zip -q
+unzip 4.0.0.zip
+cp material-design-icons-4.0.0/font/MaterialIcons-Regular.ttf ${HOME}/.fonts
+cp material-design-icons-4.0.0/font/MaterialIconsOutlined-Regular.otf ${HOME}/.fonts
+cp material-design-icons-4.0.0/font/MaterialIconsRound-Regular.otf ${HOME}/.fonts
+cp material-design-icons-4.0.0/font/MaterialIconsSharp-Regular.otf ${HOME}/.fonts
+cp material-design-icons-4.0.0/font/MaterialIconsTwoTone-Regular.otf ${HOME}/.fonts
+rm -rf material-design-icons-4.0.0
+else
+echo "Skipping Material Icons"
+fi
+
+echo "JetBrainsMono"
+wget https://download.jetbrains.com/fonts/JetBrainsMono-2.225.zip -q
+unzip JetBrainsMono-2.225.zip
+cp fonts/ttf/*.ttf ${HOME}/.fonts/
+cp fonts/variable/*ttf ${HOME}/.fonts
+rm -rf fonts
+
+fc-cache
+#+end_src
+
+** Emacs Startup
+At times I want to work with different Emacs configurations. Some
+times it in order to work on a new configuration of mine, some
+times is to test some other Emacs config frameworks like Spacemacs
+or Doom Emacs. 
+
+I keep around multiple configurations and [[https://github.com/plexus/chemacs2][chemacs2]] helps with that
+as it allow to define a default configuration while allowing
+selecting alternatives.
+
+When starting with this new configuration, I placed the following in
+~$HOME/.emacs-profiles.el~:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (("default" . ((user-emacs-directory . "~/.emacs-default.d")))
+   ("tlt" . ((user-emacs-directory . "~/.emacs-tlt"))))
+#+END_SRC
+
+I also removed ~~/.emacs~ (these days the only reason for having a
+.emacs file is if you where using ~chemacs~, the original version).
+
+Last, the following goes in ~~/.emacs-tlt/init.el~:
+
+#+begin_src emacs-lisp :tangle no
+  (require 'org)
+  (let ((mav-org
+	 (concat (file-name-as-directory user-emacs-directory) "mav.org")))
+    (org-babel-load-file mav-org))
+#+end_src
+
+Note that the org-mode file cannot be called ~init.org~ as the extracted
+emacs lisp would be saved in ~init.el~ with obvious conflict. I
+haven't found a way to specify a different destination using org-babel-load-file.
+
+I can see two alternatives to be able to use `init.org`:
+- tangle init.org on save. I don't like this too much as it requires
+  to edit the file using emacs.
+- implement an alternative to org-babel-load-file that tangle into a
+  temporary buffer and then evaluate it.
+
+Both seem more work than the benefit they give and ~config.org~ will be.
+
+By the way, ~tlt~ is because this is *T* he  *L* ast  *T* ime I start from
+scratch.
+
+* General
+
+  This is for native compilation. Should probably go in
+  ~early-init.org~ once we have it. After I figure out what eactually
+  goes inside ~early-init.el~, maybe it is strictly for before-gui
+  things.
+  
+#+begin_src emacs-lisp
+    (if (and (fboundp 'native-comp-available-p)
+             (native-comp-available-p))
+        (progn
+          (message "Native compilation is available")
+          (setq comp-deferred-compilation t)
+          (setq package-native-compile t)
+          (setq native-comp-async-query-on-exit t)
+          (setq native-comp-async-jobs-number 0) ; use half of the cores
+          (setq native-comp-async-report-warnings-errors nil)
+          (setq comp-async-report-warnings-errors nil))
+      (message "Native complation is *not* available"))
+#+end_src
+
+Let's start with general configurations that don't require any
+package.
+** Garbage Collection
+
+In ~early_init.el~ we have increased the limits for garbage collection
+to speedup package loading. Here we arrange to go back to a sane limit
+at the end of Emacs startup. If you see freezing, decrease this value
+so that GC is run more frequently.
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'emacs-startup-hook
+            (lambda ()
+              (setq gc-cons-threshold 20000000)
+              (setq large-file-warning-threshold 100000000)
+
+              (defun mav/minibuffer-setup-hook ()
+              (setq gc-cons-threshold 50000000))
+
+            (defun mav/minibuffer-exit-hook ()
+              (setq gc-cons-threshold 20000000))
+
+            (add-hook 'minibuffer-setup-hook #'mav/minibuffer-setup-hook)
+            (add-hook 'minibuffer-exit-hook #'mav/minibuffer-exit-hook)))
+#+END_SRC
+
+** No training wheels
+There're a number of things I don't really need; they tend to take screen space and be otherwise
+annoying.
+
+#+BEGIN_SRC emacs-lisp
+  (setq initial-scratch-message ""
+        inhibit-splash-screen t
+        inhibit-startup-screen t
+        inhibit-startup-buffer-menu t
+        use-dialog-box nil
+        ring-bell-function 'ignore
+        custom-safe-themes t)
+
+  (tool-bar-mode -1)
+  (toggle-scroll-bar -1)
+  (toggle-menu-bar-mode-from-frame -1)
+  (tooltip-mode -1)
+  (blink-cursor-mode 0)
+  (fset 'yes-or-no-p 'y-or-n-p)
+#+END_SRC
+
+I like to have my Emacs take all screen. I'll probably revisit this
+when I'll use wide or ultrawide screens.
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'default-frame-alist '(fullscreen . maximized))
+#+END_SRC
+
+A bit more space in the fringe:
+#+begin_src emacs-lisp
+(set-fringe-mode 10)
+#+end_src
+** Package management
+Here we set up the bare minimum for installing a few packages we need
+before ~use-package~ is available.
+
+#+BEGIN_SRC emacs-lisp
+  (require 'subr-x) ; for string-remove-suffix
+  (defun mav/litter-directory (leaf-dir &optional version)
+    (let* ((dir (directory-file-name
+                 (file-name-directory user-emacs-directory)))
+           (distribution (string-remove-suffix ".d" dir))
+           (version-dir (if version version "")))
+      (file-name-as-directory (format "%s-save.d/%s/%s" distribution leaf-dir version-dir))))
+#+END_SRC
+
+Bytecompiled files are at times incompatible across different versions
+of emacs. I solve this by keeping versioned directories, one for each
+emacs version I use. For now I haven't implemented any form of garbage
+collection.
+
+We have a conundrum here: if we don't call ~package-initialize~ here we
+cannot install ~use-package~. But if we do call it here we have trouble
+when loading ~auto-package-update~ as the first thing that package does
+is a ~(require 'package)~ followed by a ~(package-initialize)~, both
+unconditionally. It wouldn't be a problem if Emacs then didn' issue a
+warning =Warning (package): Unnecessary call to ‘package-initialize’ in
+init file=. Even the warning wouldn't be a problem, if documentation
+didn't say that double calls are reserved for "advanced" cases,
+without saying what those would be or providing an example.
+I've found in the interubes a number of suggestions to be placed in
+=early-init.el=, but none of them worked for me. So, for now I simply
+disable warnings of this nature when loading
+~auto-package-update~. Unfortunately everything after it has those
+warning disabled (maybe I should explicitely re-enable them)
+
+#+begin_src emacs-lisp :tangle no
+  (setq package-user-dir (mav/litter-directory "packages" emacs-version))
+  (setq package-archives
+        '(("gnu" . "https://elpa.gnu.org/packages/")
+          ("melpa-stable" . "https://stable.melpa.org/packages/")
+          ("melpa" . "https://melpa.org/packages/")
+          ("org" . "https://orgmode.org/elpa/")))
+  (setq package-archive-priorities
+        '(("org" . 50)
+          ("melpa-stable" . 40)
+          ("gnu" . 30)
+          ("melpa" . 10)))
+  (setq package-menu-hide-low-priority t)
+  (require 'package)
+  (package-initialize)
+  (package-refresh-contents)
+#+end_src
+
+#+begin_src emacs-lisp
+  (package-install 'use-package)
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+  (setq use-package-compute-statistics t)
+#+end_src
+
+In theory, this package is deprecated and the functionality built-in
+into ~use-package~. In practice, without it I cannot get the ~:chords~
+keyword to work.
+
+#+begin_src emacs-lisp
+  (use-package use-package-chords
+    :config (key-chord-mode 1))
+#+end_src
+
+My understanding is that ensure-system-package has been folded into
+the ~use-package~ package.  It doesn't seem the case in my version.
+  - verify this
+
+#+BEGIN_SRC emacs-lisp
+  (use-package system-packages
+    :config
+    (setq system-packages-package-manager 'apt)
+    (setq system-packages-use-sudo t)
+    )
+
+  (use-package use-package-ensure-system-package)
+#+END_SRC
+
+The modeline becomes unwieldy when lot of minor modes try to say
+things there. We were using ~diminish~, but it seems that now
+~delight~ can completely replace it.
+
+#+BEGIN_SRC emacs-lisp
+(use-package delight)
+#+END_SRC
+
+
+~paradox~ is a nicer UI for the regular list-packages.
+Note: as far as I know, all emacswiki packages have been reoved from
+ELPA and thus ~paradox-hide-wiki-packages~ might not be useful.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package paradox
+    :after async
+    :config
+    (setq-default
+     paradox-column-width-package 27
+     paradox-column-width-version 13
+     paradox-execute-asynchronously t
+     paradox-github-token (cadr (auth-source-user-and-password "api.github.com" "tsuri^paradox"))
+     paradox-hide-wiki-packages t)
+    (remove-hook 'paradox-after-execute-functions #'paradox--report-buffer-print)
+    (paradox-enable))
+#+END_SRC
+
+I don't remember to upgrade packages ever. Fully automatic is a bit
+too dangerous and I would not look into new features, so I make emacs
+ask me before updating packages.
+TODO(mav) make the installed packages into a local git repository and
+use ~auto-package-update-before-hook~ for committing (or maybe is better
+to commit after an upgrade)
+
+#+begin_src emacs-lisp
+  (use-package auto-package-update
+    :init (setq warning-suppress-log-types '((package reinitialization)))
+    :config
+     (setq auto-package-update-delete-old-versions t
+           auto-package-update-hide-results t
+           auto-package-update-interval 10
+           auto-package-update-prompt-before-update t))
+#+end_src
+
+** Save Areas
+Emacs (and emacs packages) tend to store lot of files in the .emacs.d directory. This wouldn't be
+particularly problematic if it wasn't for the fact that my .emacs-*.d is also a git repository. It is
+possible to ignore files in git, but it become annoying to have to modify .gitignore just because I
+tried a new package. So we will move everything to a ~.save~ directory.
+
+Most of this will be accomplished by the ~no-litter~ package, but we initialize here a few variables
+so that the same places can be used by other packages no-litter knows nothing about.
+
+
+#+BEGIN_SRC emacs-lisp
+  (setq no-littering-etc-directory (expand-file-name "~/.emacs-save.d/config"))
+  (setq no-littering-var-directory (expand-file-name "~/.emacs-save.d/data"))
+  (setq custom-file (expand-file-name "custom.el" no-littering-var-directory))
+  (package-install 'no-littering)
+  (require 'no-littering)
+  (setq auto-save-file-name-transforms
+        `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+  (desktop-save-mode 1)
+#+END_SRC
+
+** Secrets
+
+#+begin_src emacs-lisp
+  (use-package auth-source
+    :ensure nil
+    :custom
+    (auth-sources '((:source "~/.authinfo.gpg")))
+    (auth-source-cache-expiry (* 24 60 60)))
+#+end_src
+
+#+BEGIN_SRC emacs-lisp
+  (use-package epa-file
+    :ensure nil
+    :config
+    (epa-file-enable))
+#+END_SRC
+
+** Misc
+
+#+begin_src emacs-lisp
+(use-package async)
+#+end_src
+
+#+begin_src emacs-lisp
+#+end_src
+* Keybindings
+
+** Memory Aids
+There are a few keybindings in Emacs. Some are useful, and you won't
+remember them when needed.
+
+At times one remembers the beginning of a keybinding. ~which-key~ comes
+to the rescue and after a short delay shows all possible ways to
+extend that prefix. Not as precise as curated hydras, but has the big
+advantage of applying to all key bindings without further
+cofiguration.
+
+#+BEGIN_SRC emacs-lisp
+(use-package which-key
+  :init (which-key-mode)
+  :delight which-key-mode
+  :config
+  (setq which-key-idle-delay 0.3))
+#+END_SRC
+
+And remember the ~describe-personal-keybindings~ that comes with ~use-package~.
+
+** Global Keybindings
+
+#+BEGIN_SRC emacs-lisp
+  (use-package key-chord
+    :config
+    (key-chord-define-global "``"     'toggle-menu-bar-mode-from-frame)
+    (key-chord-define-global ".."     'comment-region)
+    (key-chord-define-global ",,"     'sort-lines)
+    (key-chord-define-global "//"     'align-regexp))
+#+END_SRC
+
+* Appearance
+** Themes
+*** Fonts
+
+(defcustom lc/default-font-family "fira code" 
+    "Default font family"
+    :type 'string
+    :group 'lc)
+
+  (defcustom lc/variable-pitch-font-family  "cantarell"
+    "Variable pitch font family"
+    :type 'string
+    :group 'lc)
+  
+  (defcustom lc/laptop-font-size 150
+    "Font size used for laptop"
+    :type 'int
+    :group 'lc)
+
+
+#+begin_src emacs-lisp :tangle no
+  (use-package emacs
+  :ensure nil
+  :init
+  (defun mav/get-font-size ()
+      "font size is calculated according to the size of the primary screen"
+      (let* (;; (command "xrandr | awk '/primary/{print sqrt( ($(nf-2)/10)^2 + ($nf/10)^2 )/2.54}'")
+             (command "osascript -e 'tell application \"finder\" to get bounds of window of desktop' | cut -d',' -f3")
+             (screen-width (string-to-number (shell-command-to-string command))))  ;;<
+        (if (> screen-width 2560) lc/laptop-font-size lc/laptop-font-size))) 
+
+    ;; Main typeface
+    (set-face-attribute 'default nil :font lc/default-font-family :height (mav/get-font-size))
+    ;; Set the fixed pitch face
+    (set-face-attribute 'fixed-pitch nil :font lc/default-font-family :height (mav/get-font-size))
+    ;; Set the variable pitch face
+    (set-face-attribute 'variable-pitch nil :font lc/variable-pitch-font-family :height (mav/get-font-size) :weight 'regular)
+    )
+#+end_src
+
+Playing with fonts.
+#+begin_src emacs-lisp
+  ;  (set-face-attribute 'default nil :font "EtBembo" :height 120)
+
+    (set-face-attribute 'default nil :font "JetBrainsMono" :height 120)
+    (set-face-attribute 'fixed-pitch nil :font "JetBrainsMono" :height 110)
+;    (set-face-attribute 'variable-pitch nil :font "Cantarell" :height 120 :weight 'regular)
+    (set-face-attribute 'variable-pitch nil :font "EtBembo" :height 160 :weight 'regular)
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package emojify
+    :config (if (display-graphic-p)
+                 (setq emojify-display-style 'image)
+               (setq emojify-display-style 'unicode)
+               )
+               (setq emojify-emoji-set "emojione-v2.2.6")
+;               (setq emojify-emoji-set "openmoji-v13-0")
+    :init (global-emojify-mode 1))
+#+end_src
+*** Theme Management
+
+#+BEGIN_SRC emacs-lisp
+  (use-package cycle-themes
+    :bind
+    ("C-c t" . cycle-themes)
+    :config
+    (cycle-themes-mode)
+    (setq cycle-themes-theme-list
+          '(doom-challenger-deep doom-city-lights doom-dracula doom-molokai doom-nord-light doom-nord doom-nova doom-one-light doom-one doom-opera-light doom-opera doom-peacock doom-solarized-light doom-spacegrey doom-tomorrow-day doom-tomorrow-night doom-vibrant adwaita deeper-blue dichromacy leuven light-blue manoj-dark misterioso tango-dark tango tsdh-dark tsdh-light wheatgrass whiteboard wombat)))
+#+END_SRC
+
+Select themes, disabling previous ones. The following function is the
+entrety of the package ~select-themes~, the only change being that we
+pass ~t~ to avoid being asked about safety. A better approach is
+probably ~custom-safe-themes~.
+
+#+BEGIN_SRC emacs-lisp
+  ; (use-package select-themes)
+  (defun select-themes (theme)
+    "Interactively select a THEME, from the available custom themes.
+
+  You can also select '*Emacs default*' to return to Emacs default theme.
+
+  Note: multiple enabled themes cause Emacs to slow down, so we
+  disable them before selecting the new theme."
+    (interactive (list (completing-read "Select theme: "
+                                  (sort (custom-available-themes) 'string<)
+                                  nil nil nil nil
+                                  "*Emacs default*")))
+    (mapc 'disable-theme custom-enabled-themes)
+    (unless (string= "*Emacs default*" theme)
+      (load-theme (intern-soft theme) t)))
+#+END_SRC
+
+TODO: modify things so that when a new theme is selected here,
+~${HOME}/.Xdefaults~ is updated. The following is ok for doom-tomorrow-night:
+
+#+begin_src sh
+  cat ~/.Xdefaults 
+  Emacs*Background: #1d1f21
+  Emacs*Foreground: #c5c8c6
+
+xrdb -merge ~/.Xdefaults                                   
+
+#+end_src
+*** Themes
+
+#+BEGIN_SRC emacs-lisp
+    (use-package doom-themes
+      :init (load-theme 'doom-tomorrow-night t))
+
+  ; here select-themes as-is is not nice as it would ask permission (e.g. no way to trust lisp code
+  ; with the ~t~ argument. TODO write our own version.
+    ;  (load-theme 'doom-one-light t)
+  ;    (load-theme 'doom-one t)
+    ;(load-theme 'doom-vibrant)
+  ;  (load-theme 'doom-acario-light t)
+    ;(load-theme 'doom-acario-dark)
+    ;(load-theme 'doom-tomorrow-day)
+    ;(load-theme 'ample-light t)
+
+#+END_SRC
+** Modeline
+
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(use-package doom-modeline
+  :init (doom-modeline-mode 1))
+#+END_SRC
+
+** Icons
+
+Remember to run ~all-the-icons-install-fonts~
+
+#+begin_src emacs-lisp
+  (defun mav/maybe-install-fonts ()
+    (let ((font-dir (concat (or (getenv "XDG_DATA_HOME")
+                                (expand-file-name "~/.local/share"))
+                                 "/fonts/")))
+      (unless (file-exists-p (concat font-dir "all-the-icons.ttf"))
+        (all-the-icons-install-fonts t))))
+#+end_src
+
+#+begin_src emacs-lisp
+; should we use the after-init hook?
+  (use-package all-the-icons :config (mav/maybe-install-fonts))
+#+end_src
+
+** Eyecandies
+
+#+begin_src emacs-lisp
+(use-package hl-todo
+  :hook ((prog-mode) . lc/hl-todo-init)
+  :init
+  (defun lc/hl-todo-init ()
+    (setq-local hl-todo-keyword-faces '(("HOLD" . "#cfdf30")
+                                        ("TODO" . "#ff9977")
+                                        ("NEXT" . "#b6a0ff")
+                                        ("PROG" . "#00d3d0")
+                                        ("FIXME" . "#ff9977")
+                                        ("DONE" . "#44bc44")
+                                        ("REVIEW" . "#6ae4b9")
+                                        ("DEPRECATED" . "#bfd9ff")))
+    (hl-todo-mode))
+  )
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package rainbow-mode
+    :config
+    (rainbow-mode))  
+#+end_src
+
+* Movement
+
+When more than two windows are displayed and you press ~C-x o~  (normally bound to ~other-window~)
+~~ace-window~ overlays a number in each window so that you can quickly
+navigate to the desired target window. And then we give ourselves a
+chord, so that ~''~ can be used to switch window.
+
+#+begin_src emacs-lisp 
+      (use-package ace-window
+        :bind
+        ("C-x o" . ace-window)
+        :chords
+        (("''" . ace-window))
+        :custom-face
+        (aw-leading-char-face ((t (:inherit ace-jump-face-foreground :font "FasterOne" :height 2.5 :foreground "dark gray" )))))
+#+end_src
+
+* Undo
+
+Friends don't let friends use Emacs' builtin undo.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package undo-tree
+    :delight undo-tree-mode
+    :chords (("uu" . undo-tree-visualize))
+    :init (global-undo-tree-mode)
+    (setq undo-tree-visualizer-diff t)
+    (setq undo-tree-visualizer-timestamps t))
+#+END_SRC
+
+* Emacs debugging
+When testing changes to the emacs configuration it is very useful to
+be able to restart emacs from within Emacs. The following allows to
+restart emacs when C-x C-c (normally bound to save-buffers-kill-emacs)
+is invoked with a universal argument.
+
+Note that when we restart emacs, all open files and frames are
+restored (curtesy of the desktop package).  We also retrieve the
+initial command line arguments. ~restart-emacs~ doesn't do this as
+there's no platform independent way for doing it. Note that
+~command-line-args~ is not sufficient as many arguments are deleted
+while being processed by the emacs C code (for instance ~--debug-init~ )
+I'd still think that it would be better than completely ignoring them,
+but I'm not the auhor of the ~~restart-emacs~ package.  Here I collect
+arguments from the ~/proc~ file system, I only care about linux anyhow.
+
+#+BEGIN_SRC emacs-lisp
+  (defun mav/emacs-args ()
+    (with-temp-buffer
+      (insert-file-contents "/proc/self/cmdline")
+      (split-string (buffer-string) "\0" t)))
+
+  (defun mav/restart-emacs-or-exit (arg)
+    (interactive "P")
+    (if arg
+        (restart-emacs (cdr (mav/emacs-args)))
+      (save-buffers-kill-emacs)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package restart-emacs
+    :bind
+    ("C-x C-c" . mav/restart-emacs-or-exit))
+#+END_SRC
+
+In elisp mode, expanding macros is often an important complement to documentation.
+#+begin_src emacs-lisp
+  (use-package macrostep
+  :bind (:map  emacs-lisp-mode-map (("C-c e" . macrostep-expand))))
+#+end_src
+
+Paredit is very useful for editing lisp code. If you do it often
+enough to remember the relative keybinding.
+#+begin_src emacs-lisp
+(use-package paredit
+  :init
+  (add-hook 'emacs-lisp-mode-hook #'enable-paredit-mode)
+  (add-hook 'eval-expression-minibuffer-setup-hook #'enable-paredit-mode)
+  (add-hook 'lisp-mode-hook #'enable-paredit-mode)
+  (add-hook 'lisp-interaction-mode-hook #'enable-paredit-mode)
+  (add-hook 'scheme-mode-hook #'enable-paredit-mode)
+  :config
+  (show-paren-mode t)
+  :bind (("M-[" . paredit-wrap-square)
+         ("M-{" . paredit-wrap-curly))
+  :delight)
+#+end_src
+
+Bug Hunter bisects elisp files for you. You can thank me later :smile:
+
+#+begin_src emacs-lisp
+(use-package bug-hunter)
+#+end_src
+* File Management
+
+#+begin_src emacs-lisp
+  (use-package dired
+    :ensure nil
+    :custom
+    (dired-listing-switches "-aBhl --group-directories-first"))
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package all-the-icons-dired
+  :after all-the-icons
+  :hook (dired-mode-hook . 'all-the-icons-dired-mode)
+  )
+#+end_src
+
+#+begin_src emacs-lisp
+
+  ;; Display the recursive size of directories in Dired
+  (use-package dired-du
+    :after dired
+    :config
+    (setq dired-du-size-format t))
+#+end_src
+* Software Development
+** Version Control
+
+I use magit for interacting with git repositories. And I'm forcing
+myself to use the command line git as little as possible.
+#+begin_src emacs-lisp
+  (use-package magit
+     :config (setq magit-save-repository-buffers 'dontask))
+#+end_src
+
+Forge allows to interact with github (and similar deployments, gitlab
+(soon) gitea etc). This for actions like pull requests and issues.
+#+begin_src emacs-lisp
+(use-package forge :after magit)
+#+end_src
+
+Navigation between versions is useful, we'll need a good keybinding
+for it.
+
+#+begin_src emacs-lisp
+(use-package git-timemachine)
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package git-gutter+
+    :config (global-git-gutter+-mode)
+    :delight)
+
+  (use-package git-gutter-fringe+ :after git-gutter+)
+#+end_src
+
+* Applications
+
+** Shell
+
+#+BEGIN_SRC emacs-lisp
+    (use-package vterm
+      :ensure-system-package cmake
+      :ensure-system-package libtool-bin
+      :custom
+      (vterm-max-scrollback 10000)
+      (vterm-shell "zsh")
+      :config
+      (defun turn-off-chrome ()
+        (hl-line-mode -1)
+        (display-line-numbers-mode -1))
+      :hook (vterm-mode . turn-off-chrome))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package vterm-toggle
+    :custom
+    (vterm-toggle-fullscreen-p t)
+    (vterm-toggle-scope 'project)
+    :bind (("s-t" . #'vterm-toggle)
+           :map vterm-mode-map
+           ("s-t" . #'vterm-toggle)))
+#+END_SRC
+
+* Dashboard
+
+#+BEGIN_SRC emacs-lisp :tangle no
+  (use-package uptimes
+    :config
+    (setq uptimes-database (concat (mav/litter-directory "uptimes") "uptimes.el")))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package fortune
+:ensure-system-package fortune
+)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package dashboard-hackernews)
+#+END_SRC
+
+
+#+begin_src emacs-lisp
+    (use-package dashboard
+      :delight (dashboard-mode page-break-lines-mode)
+      :config
+      (setq dashboard-banner-logo-title "W   E      A   R   E      L   E   G   I   O   N   S")
+      (set-face-attribute 'dashboard-banner-logo-title nil :font "Orbitron" :height 200 :weight 'bold :foreground "#196DB5")
+      (setq dashboard-startup-banner 'logo) ; TODO use this only when png image not available
+      (setq dashboard-startup-banner "~/.emacs-tlt/assets/hacker.png")
+      (setq initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*"))))
+      (dashboard-setup-startup-hook)
+      ;:hook (after-init     . dashboard-refresh-buffer)
+      ;; :custom
+      ;;  (initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*"))))
+#+END_SRC
+
+
+* Org Mode
+
+#+begin_src emacs-lisp
+    (defun mav/org-mode-setup ()
+      (org-indent-mode) ; needed given the org-startup-indented t below?
+      (auto-fill-mode 1)
+      (variable-pitch-mode 1)
+      (visual-line-mode 1)
+
+    (setq org-startup-indented t
+      org-src-tab-acts-natively t)
+
+    (set-face-attribute 'org-block-begin-line nil :font "Zen Dots" :height 110 :inverse-video t :extend t)
+    (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+    (font-lock-add-keywords 'org-mode
+                              '(("^ *\\([-]\\) "
+                                 (0 (prog1 ()
+                                      (compose-region
+                                       (match-beginning 1)
+                                       (match-end 1) "•"))))))
+
+      (setq-default prettify-symbols-alist '(("#+BEGIN_SRC" . "†")
+                                             ("#+END_SRC" . "†")
+                                             ("#+begin_src" . "†")
+                                             ("#+end_src" . "†")
+                                             ("#+BEGIN_EXAMPLE" . (?ℰ (Br . Bl) ?⇒)) ;; ℰ⇒
+                                             ("#+END_EXAMPLE"    . ?⇐)               ;; ⇐
+                                             ("#+begin_example" . (?ℰ (Br . Bl) ?⇒)) ;; ℰ⇒
+                                             ("#+end_example"    . ?⇐)               ;; ⇐
+                                             ("#+BEGIN_QUOTE" . (?𝒬 (Br . Bl) ?⇒))   ;; 𝒬⇒
+                                             ("#+END_QUOTE"    . ?⇐)                 ;; ⇐
+                                             ("#+begin_quote" . (?𝒬 (Br . Bl) ?⇒))   ;; 𝒬⇒
+                                             ("#+end_quote"    . ?⇐)                 ;; ⇐
+                                             ("[ ]" .  "☐") 
+                                             ("[X]" . "☑" ) 
+                                             ("[-]" . "❍" ) 
+                                             ("<=" . ?≤)
+                                             (">=" . "≥")
+                                             ("=>" . "⇨")))
+      (setq prettify-symbols-unprettify-at-point 'right-edge)
+      ; TODO there's a better way to enable this
+      (add-hook 'org-mode-hook 'prettify-symbols-mode)
+
+    (let* ((variable-tuple
+          (cond ((x-list-fonts "Advent Pro")         '(:font "Advent Pro"))
+              ((x-list-fonts "ETBembo")         '(:font "ETBembo"))
+                ((x-list-fonts "Source Sans Pro") '(:font "Source Sans Pro"))
+                ((x-list-fonts "Lucida Grande")   '(:font "Lucida Grande"))
+                ((x-list-fonts "Verdana")         '(:font "Verdana"))
+                ((x-family-fonts "Sans Serif")    '(:family "Sans Serif"))
+                (nil (warn "Cannot find a Sans Serif Font.  Install Source Sans Pro."))))
+         (base-font-color     (face-foreground 'default nil 'default))
+         (headline           `(:inherit default :weight bold :foreground ,base-font-color)))
+
+    (custom-theme-set-faces
+     'user
+     `(org-level-8 ((t (,@headline ,@variable-tuple))))
+     `(org-level-7 ((t (,@headline ,@variable-tuple))))
+     `(org-level-6 ((t (,@headline ,@variable-tuple))))
+     `(org-level-5 ((t (,@headline ,@variable-tuple))))
+     `(org-level-4 ((t (,@headline ,@variable-tuple :height 1.1))))
+     `(org-level-3 ((t (,@headline ,@variable-tuple :height 1.25))))
+     `(org-level-2 ((t (,@headline ,@variable-tuple :height 1.5))))
+     `(org-level-1 ((t (,@headline ,@variable-tuple :height 1.75))))
+     `(org-document-title ((t (,@headline ,@variable-tuple :height 2.0 :underline nil)))))))
+
+  (use-package org
+    :hook (org-mode . mav/org-mode-setup)
+    :custom
+    (org-hide-emphasis-markers t)
+    :config
+    ;; Ensure that anything that should be fixed-pitch in Org files appears that way
+    (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+    (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-table nil   :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+    (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+    (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+    (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
+    )
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package org-tempo
+  :ensure nil				; part of org
+    :after org
+  :config
+  (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+    )
+#+end_src
+** Beautification
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org-superstar
+    :config
+    (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1)))
+  ;  (setq org-superstar-headline-bullets-list '("☰" "☷" "☵" "☲"  "☳" "☴"  "☶"  "☱" ))
+(setq org-superstar-headline-bullets-list '("◉" "◎" "⚫" "○" "►" "◇"))
+    (setq org-superstar-cycle-headline-bullets nil)
+;  (setq org-superstar-headline-bullets-list '("✖" "✚" "◉" "○" "▶"))
+  (setq org-superstar-cycle-headline-bullets nil)
+  (setq org-ellipsis " ↴ ")
+  )
+#+END_SRC
+
+#+begin_src emacs-lisp
+(use-package org-pretty-tags
+  :demand t
+  :config
+   (setq org-pretty-tags-surrogate-strings
+         (quote
+          (("TOPIC" . "☆")
+           ("PROJEKT" . "💡")
+           ("SERVICE" . "✍")
+           ("Blog" . "✍")
+           ("music" . "♬")
+           ("security" . "🔥"))))
+   (org-pretty-tags-global-mode))
+#+end_src
+** Additionl Org Mode functionality
+
+*** Jira
+
+I use Jira at work. I should really:
+- configure this package only on work machines, elsewhere it is
+  useless
+- put the host and url in ~~/.authinfo.gpg~ (where user and password are
+  kept). These URLs are not sensitive, but is cooler to have them
+  encrypted and accessed through `work-jira`.
+
+  Note: for debugging jira connection (and anything that relies on
+  ~request.el~ , really, you may find the following setting useful:
+  #+begin_src emacs-lisp :tangle no
+    (setq request-log-level 'debug)
+    (setq request-message-level 'debug)
+  #+end_src
+  
+#+begin_src emacs-lisp
+    ;; (use-package org-jira
+    ;; :custom
+    ;; (jiralib-host "jira.int.aurora.tech")
+    ;; (jiralib-url "https://jira.int.aurora.tech")
+    ;; )
+  (use-package org-jira)
+#+end_src
+
+* Unclassified Packages
+Here we have packages that I have installed and I'm probably playing
+with. They need to be moved over time to the appropriate section in
+the main part of this configuration file.
+
+#+begin_src emacs-lisp
+  (use-package elfeed
+    :bind ("C-x f" . elfeed)
+
+    :config
+    (setq-default elfeed-search-filter "@2-days-ago +unread")
+    (setq-default elfeed-search-title-max-width 100)
+    (setq-default elfeed-search-title-min-width 100)
+    (setq elfeed-feeds
+      '(
+        ;; programming
+        ("https://news.ycombinator.com/rss" hacker)
+        ("https://www.heise.de/developer/rss/news-atom.xml" heise)
+        ("https://www.reddit.com/r/programming.rss" programming)
+        ("https://www.reddit.com/r/emacs.rss" emacs)
+
+        ;; programming languages
+        ("https://www.reddit.com/r/golang.rss" golang)
+        ("https://www.reddit.com/r/javascript.rss" javascript)
+        ("https://www.reddit.com/r/typescript.rss" typescript)
+        ("https://www.reddit.com/r/python.rss" python)
+
+        ;; cloud
+        ("https://www.reddit.com/r/aws.rss" aws)
+        ("https://www.reddit.com/r/googlecloud.rss" googlecloud)
+        ("https://www.reddit.com/r/devops.rss" devops)
+        ("https://www.reddit.com/r/kubernetes.rss" kubernetes)
+        )))
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package elfeed-goodies :after elfeed)
+#+end_src
+* Future Work
+This section list things that captured my interest. The plan is to
+look deeper in what these packages offer.
+
+** Other People's .init.el files
+   ;; Great init.el files
+    ; https://github.com/hrs/dotfiles/blob/master/emacs/.emacs.d/configuration.org
+    ; http://pages.sachachua.com/.emacs.d/Sacha.html
+    ; https://dl.dropboxusercontent.com/u/3968124/sacha-emacs.html
+    ; https://github.com/gopar/.emacs.d/blob/master/init.el
+    ; https://github.com/aaronbieber/dotfiles/tree/master/configs/emacs.d
+    ; https://github.com/hrs/dotfiles/blob/master/emacs.d/configuration.org
+    ; https://github.com/redguardtoo/emacs.d/blob/master/lisp/init-evil.el
+
+- activity-watch-mode
+- disaster. I actually did something similar that worked on a
+  region. Lost the source code. I don't think it annotated asm w/
+  high-level code. These days, I'd want multiple tabs for different
+  compilers/optimization. Also, needs to use the compilation command
+  database of clang.
+
+  Fonts:
+  - https://overpassfont.org/
+
+Download and install all Google fonts from
+https://github.com/google/fonts/archive/master.zip. Extract and
+install all ~.ttf~ in your ~$HOME/.fonts~ directory.
+
+Download jetbrains from https://www.jetbrains.com/lp/mono/
+
+(set-face-attribute 'default nil :font "JetBrainsMono 10")
+
+Download
+https://downloads.sourceforge.net/project/dejavu/dejavu/2.37/dejavu-fonts-ttf-2.37.tar.bz2?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fdejavu%2Ffiles%2Fdejavu%2F2.37%2Fdejavu-fonts-ttf-2.37.tar.bz2%2Fdownload&ts=1613947291
+
+https://edwardtufte.github.io/et-book/ nice font for org-mode,
+esecially journal
+
+** Sites
+
+https://peach-melpa.org/ gallery of themes
+https://emacsthemes.com/popular/index.html theme popularity
+
+https://github.com/larkery/emacs/blob/master/site-lisp/theme-to-xresources.el
+https://github.com/jcaw/theme-magic
