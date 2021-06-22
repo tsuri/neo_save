@@ -801,18 +801,22 @@ for it.
 
 
 #+begin_src emacs-lisp
-    (use-package dashboard
-      :delight (dashboard-mode page-break-lines-mode)
-      :config
-      (setq dashboard-banner-logo-title "W   E      A   R   E      L   E   G   I   O   N   S")
-      (set-face-attribute 'dashboard-banner-logo-title nil :font "Orbitron" :height 200 :weight 'bold :foreground "#196DB5")
-      (setq dashboard-startup-banner 'logo) ; TODO use this only when png image not available
-      (setq dashboard-startup-banner "~/.emacs-tlt/assets/hacker.png")
-      (setq initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*"))))
-      (dashboard-setup-startup-hook)
-      ;:hook (after-init     . dashboard-refresh-buffer)
-      ;; :custom
-      ;;  (initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*"))))
+  (use-package dashboard
+    :delight (dashboard-mode page-break-lines-mode)
+    :config
+
+    (if (file-readable-p "~/.emacs-tlt/assets/hacker.png")
+      (progn
+        (setq dashboard-startup-banner "~/.emacs-tlt/assets/hacker.png")
+        (setq dashboard-banner-logo-title "W   E      A   R   E      L   E   G   I   O   N   S")
+        (set-face-attribute 'dashboard-banner-logo-title nil :font "Orbitron" :height 200 :weight 'bold :foreground "#196DB5"))
+      (setq dashboard-startup-banner 'logo)
+      (setq dashboard-banner-logo-title "Welcome to Emacs Neo"))
+    (setq initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*"))))
+    (dashboard-setup-startup-hook)
+    ;:hook (after-init     . dashboard-refresh-buffer)
+    ;; :custom
+    ;;  (initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*"))))
 #+END_SRC
 
 
@@ -1047,3 +1051,5 @@ https://github.com/larkery/emacs/blob/master/site-lisp/theme-to-xresources.el
 https://github.com/jcaw/theme-magic
 
 [[https://gitlab.com/jgkamat/rmsbolt][rmsbolt]] a mode for showing the output of compiling, like compiler explorer
+
+zoom-window.el
