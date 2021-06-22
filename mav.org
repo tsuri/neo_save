@@ -1045,3 +1045,5 @@ https://emacsthemes.com/popular/index.html theme popularity
 
 https://github.com/larkery/emacs/blob/master/site-lisp/theme-to-xresources.el
 https://github.com/jcaw/theme-magic
+
+[[https://gitlab.com/jgkamat/rmsbolt][rmsbolt]] a mode for showing the output of compiling, like compiler explorer
