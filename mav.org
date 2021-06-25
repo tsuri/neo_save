@@ -28,6 +28,10 @@
 - [[#file-management][File Management]]
 - [[#software-development][Software Development]]
   - [[#version-control][Version Control]]
+  - [[#linters][Linters]]
+- [[#languages][Languages]]
+  - [[#linters-checkers][Linters, checkers]]
+  - [[#programming-laguages][Programming Laguages]]
 - [[#applications][Applications]]
   - [[#shell][Shell]]
 - [[#dashboard][Dashboard]]
@@ -40,10 +44,10 @@
   - [[#sites][Sites]]
 
 * Introduction
-  This is my personal Emacs configuration.  This is not the first time
+  This is my personal Emacs configuration. This is not the first time
   I declare [[https://www.emacswiki.org/emacs/DotEmacsBankruptcy][Emacs bankrupcy]] and start over with a new emacs life.
 
-  It is not intended to be general or beginner-friendly.  If you're a
+  It is not intended to be general or beginner-friendly. If you're a
   beginner you'll probably be better off with one of the many emacs
   configurations with batteries included.
 
@@ -254,7 +258,7 @@ warning =Warning (package): Unnecessary call to ‘package-initialize’ in
 init file=. Even the warning wouldn't be a problem, if documentation
 didn't say that double calls are reserved for "advanced" cases,
 without saying what those would be or providing an example.
-I've found in the interubes a number of suggestions to be placed in
+I've found in the intertubes a number of suggestions to be placed in
 =early-init.el=, but none of them worked for me. So, for now I simply
 disable warnings of this nature when loading
 ~auto-package-update~. Unfortunately everything after it has those
@@ -282,7 +286,6 @@ warning disabled (maybe I should explicitely re-enable them)
   (package-install 'use-package)
   (require 'use-package)
   (setq use-package-always-ensure t)
-  (setq use-package-compute-statistics t)
 #+end_src
 
 In theory, this package is deprecated and the functionality built-in
@@ -295,7 +298,7 @@ keyword to work.
 #+end_src
 
 My understanding is that ensure-system-package has been folded into
-the ~use-package~ package.  It doesn't seem the case in my version.
+the ~use-package~ package. It doesn't seem the case in my version.
   - verify this
 
 #+BEGIN_SRC emacs-lisp
@@ -393,7 +396,11 @@ so that the same places can be used by other packages no-litter knows nothing ab
 ** Misc
 
 #+begin_src emacs-lisp
-(use-package async)
+  (use-package async
+  :config
+  ; don't ask for confirmation, it is annoying.
+
+  (setq async-shell-command-buffer 'new-buffer))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -622,6 +629,93 @@ chord, so that ~''~ can be used to switch window.
         (aw-leading-char-face ((t (:inherit ace-jump-face-foreground :font "FasterOne" :height 2.5 :foreground "dark gray" )))))
 #+end_src
 
+* Completions
+
+#+BEGIN_SRC emacs-lisp
+(use-package ivy)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+    (use-package counsel
+      :config
+      (ivy-mode 1)
+      :bind
+("<f2> f" . 'counsel-describe-function)
+("<f2> v" . 'counsel-describe-variable)
+("<f2> o" . 'counsel-describe-symbol)
+("<f2> l" . 'counsel-find-library)
+("<f2> u" . counsel-unicode-char)
+)
+#+END_SRC
+
+#+begin_src emacs-lisp
+(use-package prescient)
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package ivy-prescient
+  :after counsel
+  :config
+  (ivy-prescient-mode 1)
+  (prescient-persist-mode 1)
+  )
+#+end_src
+
+
+#+BEGIN_SRC emacs-lisp
+  (use-package company
+    :bind (:map company-active-map
+           ("TAB" . company-complete-common-or-cycle)
+           ("<tab>" . company-complete-common-or-cycle)
+           ("<S-Tab>" . company-select-previous)
+           ("<backtab>" . company-select-previous)
+           ("C-n" . company-select-next)
+           ("C-p" . company-select-previous))
+    :hook (after-init . global-company-mode)
+    :custom
+    (company-require-match 'never)
+    (company-minimum-prefix-length 2)
+    (company-tooltip-align-annotations t)
+    (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
+                         company-preview-frontend
+                         company-echo-metadata-frontend))
+    (company-backends '(company-capf company-files))
+    (company-tooltip-minimum-width 30)
+    (company-tooltip-maximum-width 60))
+#+END_SRC
+
+#+begin_src emacs-lisp
+(use-package company-prescient
+:after company
+:config
+(company-prescient-mode 1))
+#+end_src
+
+#+BEGIN_SRC emacs-lisp
+  (use-package company-posframe
+    :after company
+    :delight
+    :custom
+    (company-posframe-quickhelp-show-header nil)
+    (company-posframe-show-indicator nil)
+    (company-posframe-show-metadata nil)
+    (company-posframe-quickhelp-show-params
+     (list :poshandler #'company-posframe-quickhelp-right-poshandler
+           :internal-border-width 1
+           :timeout 60
+           :internal-border-color (face-attribute 'mode-line-inactive :background)
+           :no-properties nil
+           :poshandler nil))
+    :config
+    (company-posframe-mode))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package company-box
+    :delight
+    :hook (company-mode . company-box-mode))
+#+END_SRC
+
 * Undo
 
 Friends don't let friends use Emacs' builtin undo.
@@ -636,19 +730,19 @@ Friends don't let friends use Emacs' builtin undo.
 #+END_SRC
 
 * Emacs debugging
-When testing changes to the emacs configuration it is very useful to
+When testing changes to the emacs configuration it is useful to
 be able to restart emacs from within Emacs. The following allows to
 restart emacs when C-x C-c (normally bound to save-buffers-kill-emacs)
 is invoked with a universal argument.
 
 Note that when we restart emacs, all open files and frames are
-restored (curtesy of the desktop package).  We also retrieve the
+restored (curtesy of the desktop package). We also retrieve the
 initial command line arguments. ~restart-emacs~ doesn't do this as
 there's no platform independent way for doing it. Note that
 ~command-line-args~ is not sufficient as many arguments are deleted
 while being processed by the emacs C code (for instance ~--debug-init~ )
 I'd still think that it would be better than completely ignoring them,
-but I'm not the auhor of the ~~restart-emacs~ package.  Here I collect
+but I'm not the auhor of the ~~restart-emacs~ package. Here I collect
 arguments from the ~/proc~ file system, I only care about linux anyhow.
 
 #+BEGIN_SRC emacs-lisp
@@ -676,7 +770,7 @@ In elisp mode, expanding macros is often an important complement to documentatio
   :bind (:map  emacs-lisp-mode-map (("C-c e" . macrostep-expand))))
 #+end_src
 
-Paredit is very useful for editing lisp code. If you do it often
+Paredit is useful for editing lisp code. If you do it often
 enough to remember the relative keybinding.
 #+begin_src emacs-lisp
 (use-package paredit
@@ -752,6 +846,93 @@ for it.
 
   (use-package git-gutter-fringe+ :after git-gutter+)
 #+end_src
+
+** Linters
+* Languages
+
+** Linters, checkers
+
+#+BEGIN_SRC emacs-lisp
+  (use-package flycheck
+    :delight "🦋 " ; mhh, supposed to be a butterfly
+  :ensure-system-package python3-proselint
+    :config
+    (add-hook 'after-init-hook 'global-flycheck-mode)
+  ;    (add-hook 'flycheck-mode-hook 'jc/use-eslint-from-node-modules)
+  (flycheck-define-checker proselint
+      "A linter for prose."
+      :command ("proselint" source-inplace)
+      :error-patterns
+      ((warning line-start (file-name) ":" line ":" column ": "
+                (id (one-or-more (not (any " "))))
+                (message (one-or-more not-newline)
+                         (zero-or-more "\n" (any " ") (one-or-more not-newline)))
+                line-end))
+      :modes (text-mode markdown-mode gfm-mode org-mode))
+      (add-to-list 'flycheck-checkers 'proselint)
+      (setq-default flycheck-highlighting-mode 'lines)
+      ;; Define fringe indicator / warning levels
+      (define-fringe-bitmap 'flycheck-fringe-bitmap-ball
+        (vector #b00000000
+                #b00000000
+                #b00000000
+                #b00000000
+                #b00000000
+                #b00000000
+                #b00000000
+                #b00011100
+                #b00111110
+                #b00111110
+                #b00111110
+                #b00011100
+                #b00000000
+                #b00000000
+                #b00000000
+                #b00000000
+                #b00000000))
+      (flycheck-define-error-level 'error
+        :severity 2
+        :overlay-category 'flycheck-error-overlay
+        :fringe-bitmap 'flycheck-fringe-bitmap-ball
+        :fringe-face 'flycheck-fringe-error)
+      (flycheck-define-error-level 'warning
+        :severity 1
+        :overlay-category 'flycheck-warning-overlay
+        :fringe-bitmap 'flycheck-fringe-bitmap-ball
+        :fringe-face 'flycheck-fringe-warning)
+      (flycheck-define-error-level 'info
+        :severity 0
+        :overlay-category 'flycheck-info-overlay
+        :fringe-bitmap 'flycheck-fringe-bitmap-ball
+        :fringe-face 'flycheck-fringe-info))
+
+
+
+#+END_SRC
+
+#+begin_src emacs-lisp
+    (use-package auto-dictionary
+      :hook (flyspell-mode . (lambda () (auto-dictionary-mode 1))))
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package flyspell-correct
+  :after flyspell
+  :bind (:map flyspell-mode-map ("C-;" . flyspell-correct-wrapper)))
+
+(use-package flyspell-correct-ivy
+  :after flyspell-correct)
+#+end_src
+** Programming Laguages
+*** Emacs Lisp
+
+#+begin_src emacs-lisp
+  (use-package rainbow-delimiters
+    :init
+    (progn
+      (add-hook 'prog-mode-hook 'rainbow-delimiters-mode)))
+#+end_src
+
 
 * Applications
 
