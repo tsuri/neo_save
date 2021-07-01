@@ -458,6 +458,26 @@ so I'm not sure I really do have a use for this. In programming modes, navigatin
 #+END_SRC
 
 ** Themes
+Emacs doesn't have a hook on theme changes, mainly because it is not
+easy to define precisely what a theme switch is. Yet, we have a few
+uses for a reasonable approximation, here it is:
+
+#+begin_src emacs-lisp
+  (defvar after-load-theme-hook nil
+    "Hook run after a color theme is loaded using `load-theme'.")
+
+  (defadvice load-theme (after run-after-load-theme-hook activate)
+    "Run `after-load-theme-hook'."
+    (run-hooks 'after-load-theme-hook))
+
+  (setq after-load-theme-hook
+        (lambda ()
+          (message "load theme hook")
+          ;; We should really change the foreground only when org-hide-leading-stars is t.
+          ;; For me this is always true
+          (if (boundp 'org-superstar-leading)
+              (set-face-foreground 'org-superstar-leading (face-attribute 'default :background)))))
+#+end_src
 *** Fonts
 
 (defcustom lc/default-font-family "fira code" 
@@ -1116,6 +1136,7 @@ for it.
     :hook (org-mode . mav/org-mode-setup)
     :custom
     (org-hide-emphasis-markers t)
+    (org-hide-leading-stars t)
     :config
     ;; Ensure that anything that should be fixed-pitch in Org files appears that way
     (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
@@ -1182,7 +1203,9 @@ for it.
   ;  (setq org-superstar-headline-bullets-list '("✖" "✚" "◉" "○" "▶"))
     (setq org-superstar-cycle-headline-bullets nil)
     (setq org-ellipsis " ↴ ")
-    )
+  ; TODO this is something that should be done at every theme switch.
+  ; we should have some form of hooks where we also generate a ~/.Xdefaults
+    (set-face-foreground 'org-superstar-leading (face-attribute 'default :background)))
 #+END_SRC
 
 #+begin_src emacs-lisp
