@@ -108,7 +108,7 @@ rm -rf fonts
 fc-cache
 #+end_src
 
-** Emacs Startup
+** COMMENT Emacs Startup
 At times I want to work with different Emacs configurations. Some
 times it in order to work on a new configuration of mine, some
 times is to test some other Emacs config frameworks like Spacemacs
@@ -414,6 +414,12 @@ so that the same places can be used by other packages no-litter knows nothing ab
   ([remap describe-variable] . counsel-describe-variable)
   ([remap describe-key] . helpful-key))
 #+end_src
+
+#+begin_src emacs-lisp
+(use-package autorevert
+  :delight
+  :hook (after-init . global-auto-revert-mode))
+#+end_src
 * Keybindings
 
 ** Memory Aids
@@ -463,20 +469,43 @@ easy to define precisely what a theme switch is. Yet, we have a few
 uses for a reasonable approximation, here it is:
 
 #+begin_src emacs-lisp
-  (defvar after-load-theme-hook nil
-    "Hook run after a color theme is loaded using `load-theme'.")
+  (defun update-x-defaults (theme-name)
+    (with-temp-file "~/.Xdefaults"
+      (let ((foreground (face-attribute 'default :foreground))
+            (background (face-attribute 'default :background)))
+        (insert (format "! Colors from theme %s" theme-name))
+        (insert (format "
+  Emacs*Background: %s
+  Emacs*Foreground: %s" foreground background))))
+    (call-process-shell-command "xrdb -merge ~/.Xdefaults&" nil 0))
 
-  (defadvice load-theme (after run-after-load-theme-hook activate)
-    "Run `after-load-theme-hook'."
-    (run-hooks 'after-load-theme-hook))
+  (defun load-theme-advice (orig-fun &rest args)
+    (let ((theme-name (car args)))
+    (apply orig-fun args)
+    ;; We should really change the foreground only when org-hide-leading-stars is t.
+    ;; For me this is always true
+    (if (boundp 'org-superstar-leading)
+        (set-face-foreground 'org-superstar-leading (face-attribute 'default :background)))
+    (update-x-defaults theme-name)))
 
-  (setq after-load-theme-hook
-        (lambda ()
-          (message "load theme hook")
-          ;; We should really change the foreground only when org-hide-leading-stars is t.
-          ;; For me this is always true
-          (if (boundp 'org-superstar-leading)
-              (set-face-foreground 'org-superstar-leading (face-attribute 'default :background)))))
+  (advice-add 'load-theme :around #'load-theme-advice)
+
+          ;; (defvar mav/current-theme nil)
+
+          ;; (defvar mav/after-load-theme-hook nil
+          ;;   "Hook run after a color theme is loaded using `load-theme'.")
+
+          ;; (defadvice load-theme (after run-after-load-theme-hook activate)
+          ;;   "Run `after-load-theme-hook'."
+          ;;   (run-hooks 'mav/after-load-theme-hook))
+
+          ;; (setq mav/after-load-theme-hook
+          ;;       (lambda (theme)
+          ;;         (message (format "load theme hook %s" theme))
+          ;;         ;; We should really change the foreground only when org-hide-leading-stars is t.
+          ;;         ;; For me this is always true
+          ;;         (if (boundp 'org-superstar-leading)
+          ;;             (set-face-foreground 'org-superstar-leading (face-attribute 'default :background)))))
 #+end_src
 *** Fonts
 
@@ -552,9 +581,9 @@ Playing with fonts.
     :bind
     ("C-c t" . cycle-themes)
     :config
-    (cycle-themes-mode)
-    (setq cycle-themes-theme-list
-          '(doom-challenger-deep doom-city-lights doom-dracula doom-molokai doom-nord-light doom-nord doom-nova doom-one-light doom-one doom-opera-light doom-opera doom-peacock doom-solarized-light doom-spacegrey doom-tomorrow-day doom-tomorrow-night doom-vibrant adwaita deeper-blue dichromacy leuven light-blue manoj-dark misterioso tango-dark tango tsdh-dark tsdh-light wheatgrass whiteboard wombat)))
+    (cycle-themes-mode))
+;    (setq cycle-themes-theme-list
+;          '(doom-challenger-deep doom-city-lights doom-dracula doom-molokai doom-nord-light doom-nord doom-nova doom-one-light doom-one doom-opera-light doom-opera doom-peacock doom-solarized-light doom-spacegrey doom-tomorrow-day doom-tomorrow-night doom-vibrant adwaita deeper-blue dichromacy leuven light-blue manoj-dark misterioso tango-dark tango tsdh-dark tsdh-light wheatgrass whiteboard wombat)))
 #+END_SRC
 
 Select themes, disabling previous ones. The following function is the
@@ -591,23 +620,27 @@ TODO: modify things so that when a new theme is selected here,
 xrdb -merge ~/.Xdefaults                                   
 
 #+end_src
+
 *** Themes
 
 #+BEGIN_SRC emacs-lisp
     (use-package doom-themes
-      :init (load-theme 'doom-tomorrow-night t))
 
-  ; here select-themes as-is is not nice as it would ask permission (e.g. no way to trust lisp code
-  ; with the ~t~ argument. TODO write our own version.
-    ;  (load-theme 'doom-one-light t)
-  ;    (load-theme 'doom-one t)
-    ;(load-theme 'doom-vibrant)
-  ;  (load-theme 'doom-acario-light t)
-    ;(load-theme 'doom-acario-dark)
-    ;(load-theme 'doom-tomorrow-day)
-    ;(load-theme 'ample-light t)
-
+    :config (progn
+              (load-theme 'doom-tomorrow-night t nil)
+              (load-theme 'doom-one-light t t)
+              (load-theme 'doom-one t t)
+              (load-theme 'doom-vibrant t t)
+  ;            (load-theme 'doom-acario-light t)
+  ;            (load-theme 'doom-acario-dark t)
+              (load-theme 'doom-tomorrow-day t t)))
 #+END_SRC
+
+#+begin_src emacs-lisp
+(use-package solarized-theme
+  :config (progn (load-theme 'solarized-dark t t)
+                 (load-theme 'solarized-light t t)))
+#+end_src
 ** Modeline
 
 
@@ -881,6 +914,48 @@ Bug Hunter bisects elisp files for you. You can thank me later :smile:
     :config
     (setq dired-du-size-format t))
 #+end_src
+
+#+begin_src emacs-lisp
+  (use-package dired-git-info
+    :bind (:map dired-mode-map
+           (")" . dired-git-info-mode)))
+#+end_src
+
+Colorful dired
+#+begin_src emacs-lisp
+  (use-package diredfl
+    :init (diredfl-global-mode 1))
+#+end_src
+
+Extra Dired functionality. Not on melpa, this is onluy configuration
+#+begin_src emacs-lisp
+    (use-package dired-aux :ensure nil)
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package dired-x
+  :ensure nil
+    :demand
+    :config
+    (let ((cmd "xdg-open"))
+      (setq dired-guess-shell-alist-user
+            `(("\\.pdf\\'" ,cmd)
+              ("\\.docx\\'" ,cmd)
+              ("\\.\\(?:djvu\\|eps\\)\\'" ,cmd)
+              ("\\.\\(?:jpg\\|jpeg\\|png\\|gif\\|xpm\\)\\'" ,cmd)
+              ("\\.\\(?:xcf\\)\\'" ,cmd)
+              ("\\.csv\\'" ,cmd)
+              ("\\.tex\\'" ,cmd)
+              ("\\.\\(?:mp4\\|mkv\\|avi\\|flv\\|rm\\|rmvb\\|ogv\\)\\(?:\\.part\\)?\\'" ,cmd)
+              ("\\.\\(?:mp3\\|flac\\)\\'" ,cmd)
+              ("\\.html?\\'" ,cmd)
+              ("\\.md\\'" ,cmd))))
+
+    (setq dired-omit-files
+          (concat dired-omit-files
+                  "\\|^.DS_Store$\\|^.projectile$\\|^.git*\\|^.svn$\\|^.vscode$\\|\\.js\\.meta$\\|\\.meta$\\|\\.elc$\\|^.emacs.*")))
+
+#+end_src
 * Software Development
 ** Version Control
 
@@ -974,6 +1049,37 @@ for it.
 
 
 #+END_SRC
+
+#+begin_src emacs-lisp
+(use-package flyspell
+  :delight
+  :if (executable-find "aspell")
+  :hook (((text-mode outline-mode) . flyspell-mode)
+         (prog-mode . flyspell-prog-mode)
+         (flyspell-mode . (lambda ()
+                            (dolist (key '("C-;" "C-," "C-."))
+                              (unbind-key key flyspell-mode-map)))))
+  :init (setq flyspell-issue-message-flag nil
+              ispell-program-name "aspell"
+              ispell-extra-args '("--sug-mode=ultra" "--lang=en_US" "--run-together"))
+  :config
+  ;; Correcting words with flyspell via Ivy
+  (use-package flyspell-correct-ivy
+    :after ivy
+    :bind (:map flyspell-mode-map
+           ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper))
+    :init (setq flyspell-correct-interface #'flyspell-correct-ivy)))
+#+end_src
+
+#+begin_src emacs-lisp
+;;; no visible effect
+  (use-package flyspell-correct-ivy
+    :after ivy
+    :bind (:map flyspell-mode-map
+           ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper))
+    :init (setq flyspell-correct-interface #'flyspell-correct-ivy))
+#+end_src
+
 
 #+begin_src emacs-lisp
     (use-package auto-dictionary
@@ -1222,7 +1328,7 @@ for it.
            ("security" . "🔥"))))
    (org-pretty-tags-global-mode))
 #+end_src
-** Additionl Org Mode functionality
+** Additional Org Mode functionality
 
 *** Jira
 
