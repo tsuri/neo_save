@@ -52,7 +52,7 @@
   configurations with batteries included.
 
   Also, my Emacs stays on for weeks or months at a time; I'm not
-  interested in reducing startup time or delaying loding of packages
+  interested in reducing startup time or delaying loading of packages
   until they're first used. It simply doesn't affect me.
 
 ** System Config
@@ -430,7 +430,7 @@ At times one remembers the beginning of a keybinding. ~which-key~ comes
 to the rescue and after a short delay shows all possible ways to
 extend that prefix. Not as precise as curated hydras, but has the big
 advantage of applying to all key bindings without further
-cofiguration.
+configuration.
 
 #+BEGIN_SRC emacs-lisp
 (use-package which-key
@@ -473,6 +473,7 @@ uses for a reasonable approximation, here it is:
     (with-temp-file "~/.Xdefaults"
       (let ((foreground (face-attribute 'default :foreground))
             (background (face-attribute 'default :background)))
+        (insert (format "Emacs*Fullscreen: maximized\n"))
         (insert (format "! Colors from theme %s" theme-name))
         (insert (format "
   Emacs*Background: %s
@@ -508,21 +509,6 @@ uses for a reasonable approximation, here it is:
           ;;             (set-face-foreground 'org-superstar-leading (face-attribute 'default :background)))))
 #+end_src
 *** Fonts
-
-(defcustom lc/default-font-family "fira code" 
-    "Default font family"
-    :type 'string
-    :group 'lc)
-
-  (defcustom lc/variable-pitch-font-family  "cantarell"
-    "Variable pitch font family"
-    :type 'string
-    :group 'lc)
-  
-  (defcustom lc/laptop-font-size 150
-    "Font size used for laptop"
-    :type 'int
-    :group 'lc)
 
 
 #+begin_src emacs-lisp :tangle no
@@ -587,7 +573,7 @@ Playing with fonts.
 #+END_SRC
 
 Select themes, disabling previous ones. The following function is the
-entrety of the package ~select-themes~, the only change being that we
+entirety of the package ~select-themes~, the only change being that we
 pass ~t~ to avoid being asked about safety. A better approach is
 probably ~custom-safe-themes~.
 
@@ -610,7 +596,7 @@ probably ~custom-safe-themes~.
 #+END_SRC
 
 TODO: modify things so that when a new theme is selected here,
-~${HOME}/.Xdefaults~ is updated. The following is ok for doom-tomorrow-night:
+~${HOME}/.Xdefaults~ is updated. The following is OK for doom-tomorrow-night:
 
 #+begin_src sh
   cat ~/.Xdefaults 
@@ -667,7 +653,7 @@ Remember to run ~all-the-icons-install-fonts~
   (use-package all-the-icons :config (mav/maybe-install-fonts))
 #+end_src
 
-** Eyecandies
+** Eye candies
 
 #+begin_src emacs-lisp
 (use-package hl-todo
@@ -715,6 +701,21 @@ chord, so that ~''~ can be used to switch window.
 (use-package ivy)
 #+END_SRC
 
+
+#+begin_src emacs-lisp
+  (use-package ivy-rich
+:config
+  (setq ivy-rich--original-display-transformers-list nil)  ;; needs to be set otherwise (ivy-rich-set-display-transformer) does not get called
+  (ivy-set-display-transformer 'ivy-switch-buffer
+                               'ivy-rich-switch-buffer-transformer)
+  (setq-default ivy-rich-path-style 'abbrev
+                ivy-virtual-abbreviate 'full
+                ivy-rich-switch-buffer-align-virtual-buffer t)
+  :after all-the-icons-ivy-rich
+    :init
+    (ivy-rich-mode 1))
+#+end_src
+
 #+begin_src emacs-list
 (use-package all-the-icons-ivy-rich
   :after ivy
@@ -723,13 +724,6 @@ chord, so that ~''~ can be used to switch window.
 (setq all-the-icons-ivy-rich-icon-size 1.0)
 (setq all-the-icons-ivy-rich-project t)
   :init (all-the-icons-ivy-rich-mode 1))
-#+end_src
-
-#+begin_src emacs-lisp
-  (use-package ivy-rich
-  :after all-the-icons-ivy-rich
-    :init
-    (ivy-rich-mode 1))
 #+end_src
 
 
@@ -814,6 +808,23 @@ chord, so that ~''~ can be used to switch window.
     :hook (company-mode . company-box-mode))
 #+END_SRC
 
+Not sure if marginalia adds on top of Ivy rich.
+We might still wan to have it for our own completions
+#+begin_src emacs-lisp :tangle no
+(use-package marginalia 
+  ;; Either bind `marginalia-cycle` globally or only in the minibuffer
+  :bind (("M-A" . marginalia-cycle)))
+;         :map minibuffer-local-map
+;         ("M-A" . marginalia-cycle))
+
+  ;; The :init configuration is always executed (Not lazy!)
+  :init
+
+  ;; Must be in the :init section of use-package such that the mode gets
+  ;; enabled right away. Note that this forces loading the package.
+  (marginalia-mode))
+#+end_src
+
 * Undo
 
 Friends don't let friends use Emacs' builtin undo.
@@ -828,20 +839,20 @@ Friends don't let friends use Emacs' builtin undo.
 #+END_SRC
 
 * Emacs debugging
-When testing changes to the emacs configuration it is useful to
-be able to restart emacs from within Emacs. The following allows to
-restart emacs when C-x C-c (normally bound to save-buffers-kill-emacs)
+When testing changes to the Emacs configuration it is useful to
+be able to restart Emacs from within Emacs. The following allows to
+restart Emacs when C-x C-c (normally bound to save-buffers-kill-Emacs)
 is invoked with a universal argument.
 
-Note that when we restart emacs, all open files and frames are
-restored (curtesy of the desktop package). We also retrieve the
+Note that when we restart Emacs, all open files and frames are
+restored (courtesy of the desktop package). We also retrieve the
 initial command line arguments. ~restart-emacs~ doesn't do this as
 there's no platform independent way for doing it. Note that
 ~command-line-args~ is not sufficient as many arguments are deleted
-while being processed by the emacs C code (for instance ~--debug-init~ )
+while being processed by the Emacs C code (for instance ~--debug-init~ )
 I'd still think that it would be better than completely ignoring them,
-but I'm not the auhor of the ~~restart-emacs~ package. Here I collect
-arguments from the ~/proc~ file system, I only care about linux anyhow.
+but I'm not the author of the ~~restart-emacs~ package. Here I collect
+arguments from the ~/proc~ file system, I only care about Linux anyhow.
 
 #+BEGIN_SRC emacs-lisp
   (defun mav/emacs-args ()
@@ -862,7 +873,7 @@ arguments from the ~/proc~ file system, I only care about linux anyhow.
     ("C-x C-c" . mav/restart-emacs-or-exit))
 #+END_SRC
 
-In elisp mode, expanding macros is often an important complement to documentation.
+In eliasp mode, expanding macros is often an important complement to documentation.
 #+begin_src emacs-lisp
   (use-package macrostep
   :bind (:map  emacs-lisp-mode-map (("C-c e" . macrostep-expand))))
@@ -927,7 +938,7 @@ Colorful dired
     :init (diredfl-global-mode 1))
 #+end_src
 
-Extra Dired functionality. Not on melpa, this is onluy configuration
+Extra Dired functionality. Not on Melba, this is only configuration
 #+begin_src emacs-lisp
     (use-package dired-aux :ensure nil)
 #+end_src
@@ -957,6 +968,24 @@ Extra Dired functionality. Not on melpa, this is onluy configuration
 
 #+end_src
 * Software Development
+** Project Management
+
+#+begin_src emacs-lisp
+  (use-package projectile
+    :delight
+    :config
+    (projectile-mode)
+    (setq projectile-completion-system 'ivy)
+    (setq projectile-project-compilation-cmd "bazel build //...")
+    :bind-keymap
+    ("s-p" . projectile-command-map)
+    :init
+  ; not sure which, they seem both useless in a large code base
+    ;(setq projectile-switch-project-action #'projectile-dired)
+    (setq projectile-switch-project-action 'projectile-vc)
+    )
+#+end_src
+
 ** Version Control
 
 I use magit for interacting with git repositories. And I'm forcing
@@ -966,8 +995,8 @@ myself to use the command line git as little as possible.
      :config (setq magit-save-repository-buffers 'dontask))
 #+end_src
 
-Forge allows to interact with github (and similar deployments, gitlab
-(soon) gitea etc). This for actions like pull requests and issues.
+Forge allows to interact with GitHub (and similar deployments, git lab
+(soon) git ea etc). This for actions like pull requests and issues.
 #+begin_src emacs-lisp
 (use-package forge :after magit)
 #+end_src
@@ -987,7 +1016,81 @@ for it.
   (use-package git-gutter-fringe+ :after git-gutter+)
 #+end_src
 
-** Linters
+* Language Server Protocol
+Lints ed instructions at =https://stackoverflow.com/questions/66223241/how-to-install-clang-11-on-debian=
+
+#+BEGIN_SRC emacs-lisp
+    (use-package lsp-mode
+    :custom
+    (lsp-clients-clangd-executable "/usr/bin/clangd-11")
+      :config
+      (setq lsp-clients-clangd-args '("-j=4" "-cross-file-rename" "-background-index" "-log=error"))
+      (add-hook 'c++-mode-hook #'lsp)
+;      (add-hook 'java-mode . #'lsp-deferred)
+      (add-hook 'python-mode-hook #'lsp))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package lsp-ui
+    :requires lsp-mode flycheck
+    :config
+    (setq lsp-ui-doc-enable t
+          lsp-ui-doc-use-childframe t
+          lsp-ui-doc-position 'bottom
+          lsp-ui-doc-max-width 100
+          lsp-ui-doc-include-signature t
+          lsp-ui-sideline-enable nil
+          lsp-ui-flycheck-enable t
+          lsp-ui-flycheck-list-position 'right
+          lsp-ui-flycheck-live-reporting t
+          lsp-ui-peek-enable t
+          lsp-ui-peek-list-width 60
+          lsp-ui-peek-peek-height 25)
+
+    (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+#+END_SRC
+
+** C++
+
+#+BEGIN_SRC emacs-lisp
+      (use-package modern-cpp-font-lock
+        :config
+        (add-hook 'c++-mode-hook 'modern-c++-font-lock-mode))
+#+END_SRC
+
+** Go
+#+begin_src emacs-lisp
+  (use-package go-mode
+    :commands go-mode
+    :ensure-system-package
+    ((goimports . "go get -u golang.org/x/tools/cmd/goimports")
+     (godef . "go get -u github.com/rogpeppe/godef")
+     (gopls . "go get -u golang.org/x/tools/gopls")
+  ;   (gopls . "go get -u golang.org/x/tools/gopls@latest")
+     (gocode . "go get -u github.com/nsf/gocode"))
+    :hook (go-mode . lsp-deferred)
+    :config
+    (setq gofmt-command "/home/mav/go/bin/goimports")
+    (add-hook 'before-save-hook #'gofmt-before-save)
+    (add-hook 'go-mode-hook 'go-eldoc-setup))
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package go-eldoc
+  :requires go-mode
+  :hook go-mode)
+#+end_src
+
+** Bazel
+
+#+begin_src emacs-lisp
+(use-package bazel)
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package k8s-mode
+  :hook (k8s-mode . yas-minor-mode))
+#+end_src
 * Languages
 
 ** Linters, checkers
@@ -1008,7 +1111,9 @@ for it.
                 (message (one-or-more not-newline)
                          (zero-or-more "\n" (any " ") (one-or-more not-newline)))
                 line-end))
-      :modes (text-mode markdown-mode gfm-mode org-mode))
+      :modes (text-mode markdown-mode gfm-mode))
+; org mode is really unfeasible
+;      :modes (text-mode markdown-mode gfm-mode org-mode))
       (add-to-list 'flycheck-checkers 'proselint)
       (setq-default flycheck-highlighting-mode 'lines)
       ;; Define fringe indicator / warning levels
@@ -1045,56 +1150,61 @@ for it.
         :overlay-category 'flycheck-info-overlay
         :fringe-bitmap 'flycheck-fringe-bitmap-ball
         :fringe-face 'flycheck-fringe-info))
-
-
-
 #+END_SRC
 
 #+begin_src emacs-lisp
-(use-package flyspell
-  :delight
-  :if (executable-find "aspell")
-  :hook (((text-mode outline-mode) . flyspell-mode)
-         (prog-mode . flyspell-prog-mode)
-         (flyspell-mode . (lambda ()
-                            (dolist (key '("C-;" "C-," "C-."))
-                              (unbind-key key flyspell-mode-map)))))
-  :init (setq flyspell-issue-message-flag nil
-              ispell-program-name "aspell"
-              ispell-extra-args '("--sug-mode=ultra" "--lang=en_US" "--run-together"))
-  :config
-  ;; Correcting words with flyspell via Ivy
-  (use-package flyspell-correct-ivy
-    :after ivy
-    :bind (:map flyspell-mode-map
-           ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper))
-    :init (setq flyspell-correct-interface #'flyspell-correct-ivy)))
+(use-package flycheck-yamllint
+  :init
+  (progn
+    (eval-after-load 'flycheck
+      '(add-hook 'flycheck-mode-hook 'flycheck-yamllint-setup))))
 #+end_src
 
 #+begin_src emacs-lisp
-;;; no visible effect
-  (use-package flyspell-correct-ivy
-    :after ivy
-    :bind (:map flyspell-mode-map
-           ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper))
-    :init (setq flyspell-correct-interface #'flyspell-correct-ivy))
+(use-package flycheck-indicator
+  :hook (flycheck-mode . flycheck-indicator-mode))
+#+end_src
+
+#+begin_src emacs-lisp :tangle no
+  ;; (use-package flyspell
+  ;;   :delight
+  ;;   :if (executable-find "aspell")
+  ;;   :hook (((text-mode outline-mode) . flyspell-mode)
+  ;;          (prog-mode . flyspell-prog-mode)
+  ;;          (flyspell-mode . (lambda ()
+  ;;                             (dolist (key '("C-;" "C-," "C-."))
+  ;;                               (unbind-key key flyspell-mode-map)))))
+  ;;   :init (setq flyspell-issue-message-flag nil
+  ;;               ispell-program-name "aspell"
+  ;;               ispell-extra-args '("--sug-mode=ultra" "--lang=en_US" "--run-together"))
+  ;; )
+#+end_src
+
+#+begin_src emacs-lisp :tangle no
+  ;;; no visible effect
+    ;; (use-package flyspell-correct-ivy
+    ;;   :after ivy
+    ;;   :bind (:map flyspell-mode-map
+    ;;          ([remap flyspell-correct-word-before-point] . flyspell-correct-wrapper))
+    ;;   :init (setq flyspell-correct-interface #'flyspell-correct-ivy))
 #+end_src
 
 
-#+begin_src emacs-lisp
-    (use-package auto-dictionary
-      :hook (flyspell-mode . (lambda () (auto-dictionary-mode 1))))
+#+begin_src emacs-lisp :tangle no
+  ;; (use-package auto-dictionary
+  ;;   :hook (flyspell-mode . (lambda () (auto-dictionary-mode 1))))
 #+end_src
 
-#+begin_src emacs-lisp
-(use-package flyspell-correct
-  :after flyspell
-  :bind (:map flyspell-mode-map ("C-;" . flyspell-correct-wrapper)))
+#+begin_src emacs-lisp :tangle no
+  ;; (use-package flyspell-correct
+  ;;   :after flyspell
+  ;;   :bind (:map flyspell-mode-map ("C-;" . flyspell-correct-wrapper)))
 
-(use-package flyspell-correct-ivy
-  :after flyspell-correct)
+  ;; (use-package flyspell-correct-ivy
+  ;;   :after flyspell-correct)
 #+end_src
 ** Programming Languages
+
 *** Emacs Lisp
 
 #+begin_src emacs-lisp
@@ -1148,25 +1258,29 @@ for it.
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-  (use-package dashboard-hackernews)
+    (use-package dashboard-hackernews)
 #+END_SRC
 
 
 #+begin_src emacs-lisp
   (use-package dashboard
+    :after dashboard-hackernews
     :delight (dashboard-mode page-break-lines-mode)
     :config
-
     (if (file-readable-p "~/.emacs-tlt/assets/hacker.png")
-      (progn
-        (setq dashboard-startup-banner "~/.emacs-tlt/assets/hacker.png")
-        (setq dashboard-banner-logo-title "W   E      A   R   E      L   E   G   I   O   N   S")
-        (set-face-attribute 'dashboard-banner-logo-title nil :font "Orbitron" :height 200 :weight 'bold :foreground "#196DB5"))
+        (progn
+          (setq dashboard-startup-banner "~/.emacs-tlt/assets/hacker.png")
+          (setq dashboard-banner-logo-title "W   E      A   R   E      L   E   G   I   O   N   S")
+          (set-face-attribute 'dashboard-banner-logo-title nil :font "Orbitron" :height 200 :weight 'bold :foreground "#196DB5"))
       (setq dashboard-startup-banner 'logo)
       (setq dashboard-banner-logo-title "Welcome to Emacs Neo"))
-    (setq initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*"))))
+    (setq dashboard-items
+          '((recent . 5)
+            (agenda . 10)
+            (hackernews . 5)))
+  ;  (setq initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*")))
     (dashboard-setup-startup-hook)
-    ;:hook (after-init     . dashboard-refresh-buffer)
+    :hook (after-init     . dashboard-refresh-buffer))
     ;; :custom
     ;;  (initial-buffer-choice #'(lambda () (get-buffer-create "*dashboard*"))))
 #+END_SRC
@@ -1339,7 +1453,7 @@ I use Jira at work. I should really:
   kept). These URLs are not sensitive, but is cooler to have them
   encrypted and accessed through `work-jira`.
 
-  Note: for debugging jira connection (and anything that relies on
+  Note: for debugging org-roam-in connection (and anything that relies on
   ~request.el~ , really, you may find the following setting useful:
   #+begin_src emacs-lisp :tangle no
     (setq request-log-level 'debug)
@@ -1353,6 +1467,26 @@ I use Jira at work. I should really:
     ;; (jiralib-url "https://jira.int.aurora.tech")
     ;; )
   (use-package org-jira)
+#+end_src
+
+** Org-roam
+
+#+begin_src emacs-lisp
+      (use-package org-roam
+      :init
+      (setq org-roam-v2-ack t)
+      :custom
+      (org-roam-directory "~/org-roam")
+    :bind (:map org-roam-mode-map
+                (("C-c n l" . org-roam)
+                 ("C-c n f" . org-roam-find-file)
+                 ("C-c n g" . org-roam-graph))
+                :map org-mode-map
+                (("C-c n i" . org-roam-insert)))
+    :config
+  (org-roam-setup)
+  )
+
 #+end_src
 
 * Unclassified Packages
